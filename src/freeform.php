@@ -191,6 +191,8 @@ class Form implements IteratorAggregate
     }
 }
 
+
+
 class Field
 {
     public $form;
@@ -227,9 +229,13 @@ class Field
     
     public function validate()
     {
+        if (!isset($this->value) || $this->value === null) {
+            // No value was submitted by a form, nothing to validate.
+            return;
+        }
+        
         foreach ($this->rules as $rule => $arg) {
-            switch ($rule)
-            {
+            switch ($rule) {
                 case 'required':
                     // TODO: support required based on callback.
                     if (strlen($this->value) === 0) {
@@ -435,4 +441,11 @@ class SelectInput extends Input
         $html .= '</select>';
         return $html;
     }
+}
+
+
+
+class ValidationError extends Exception
+{
+
 }
