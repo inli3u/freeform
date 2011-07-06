@@ -1,10 +1,15 @@
 <?php
 
-class Form implements IteratorAggregate
+class Freeform implements IteratorAggregate
 {
     protected $fields = array();
-    private $data = array();
+    protected $data = array();
     public $readonly = false;
+    
+    static public function Select($attr = null, $rules = null)
+    {
+    	return new SelectInput($attr, $rules);
+    }
     
     public function __construct($data = array())
     {
@@ -53,23 +58,25 @@ class Form implements IteratorAggregate
         return $this->fields[$key];
     }
     
-    public function __set($id, $field)
+    public function __set($id, FreeformInput $input)
     {
-        if (!$field instanceof Field) {
-            throw new Exception('Form field "' . $key . '" must be initialized with a Field object');
+/*
+        if (!$field instanceof FreeformField) {
+            throw new Exception('Form field "' . $id . '" must be initialized with a Field object');
         }
-        $field->form = $this;
+*/
+        $input->form = $this;
         // Auto-set the field name, id, and value if not already set.
-        if (!isset($field->name)) {
-            $field->name = $id;
+        if (!isset($input->name)) {
+            $input->name = $id;
         }
-        if (!isset($field->id)) {
-            $field->id = $id;
+        if (!isset($input->id)) {
+            $input->id = $id;
         }
-        if (!isset($field->value) && isset($this->data[$id])) {
-            $field->value = $this->data[$id];
+        if (isset($this->data[$id])) {
+            $input->set_submitted_value($this->data[$id]);
         }
-        $this->fields[$id] = $field;
+        $this->fields[$id] = $input;
     }
     
     public static function parse_attr($str)
@@ -191,9 +198,8 @@ class Form implements IteratorAggregate
     }
 }
 
-
-
-class Field
+/*
+class FreeformField
 {
     public $form;
     //public $value;
@@ -203,7 +209,7 @@ class Field
     
     public function __construct($view, $view_params = null, $rules = null)
     {
-        if (!$view instanceof Input) {
+        if (!$view instanceof FreeformInput) {
             // Init from class name.
             $view .= 'Input';
             $view = new $view();
@@ -215,7 +221,7 @@ class Field
     
     public function set_rules($rules)
     {
-        $this->rules = !is_array($rules) ? Form::parse_attr($rules) : $rules;
+        $this->rules = !is_array($rules) ? Freeform::parse_attr($rules) : $rules;
     }
     
     function render()
@@ -229,13 +235,9 @@ class Field
     
     public function validate()
     {
-        if (!isset($this->value) || $this->value === null) {
-            // No value was submitted by a form, nothing to validate.
-            return;
-        }
-        
         foreach ($this->rules as $rule => $arg) {
-            switch ($rule) {
+            switch ($rule)
+            {
                 case 'required':
                     // TODO: support required based on callback.
                     if (strlen($this->value) === 0) {
@@ -316,14 +318,19 @@ class Field
         return $this->value;
     }
 }
+*/
 
-class Input {
+abstract class FreeformInput {
+	public $form = null;
     protected $elem = null;
     protected $attr = array();
+    protected $rules = array();
+    protected $append = '';
     
-    public function __construct($attr = null)
+    public function __construct($attr = null, $rules = null)
     {
         $this->set_attr($attr);
+        $this->set_rules($rules);
         $this->config();
     }
     
@@ -346,9 +353,23 @@ class Input {
         $this->attr[$key] = $value;
     }
     
+    public function set_submitted_value($value)
+    {
+    	$this->value = $value;
+    }
+    
     public function set_attr($attr)
     {
-        $this->attr = is_null($attr) ? array() : (is_array($attr) ? $attr : Form::parse_attr($attr));
+    	if (!is_null($attr)) {
+        	$this->attr = (is_array($attr) ? $attr : Freeform::parse_attr($attr)) + $this->attr;
+        }
+    }
+    
+    public function set_rules($rules)
+    {
+    	if (!is_null($rules)) {
+        	$this->rules = (is_array($rules) ? $rules : Freeform::parse_attr($rules)) + $this->rules;
+        }
     }
     
     public function get_attr_str()
@@ -365,87 +386,167 @@ class Input {
         }
         return implode(' ', $pairs);
     }
+    
+    public function append_html($html)
+    {
+    	$this->append = $html;
+    }
+    
+    public function __toString()
+    {
+    	return $this->render();
+    }
 }
 
-class TextInput extends Input
+abstract class CheckedInput extends FreeformInput
 {
-    function render($name, $value)
+    public function __construct($attr = null, $rules = null)
     {
+    	// Default value for checkboxes and radios.
+        $this->value = 1;
+        parent::__construct($attr, $rules);
+    }
+    
+	public function set_submitted_value($value)
+	{
+		// Checkboxes and radios are different, the submitted value should not overwrite the value attr.
+		// Instead it will set the checked attr.
+		$this->checked = ($value == $this->value);
+	}
+}
+
+
+class HiddenInput extends FreeformInput
+{
+    function render($attr = null)
+    {
+        $this->set_attr($attr);
+        $this->type = 'hidden';
+        return '<input ' . $this->get_attr_str() . '/>';
+    }
+}
+
+class SubmitInput extends FreeformInput
+{
+    function render($attr = null)
+    {
+        $this->set_attr($attr);
+        $this->type = 'submit';
+        return '<input ' . $this->get_attr_str() . '/>';
+    }
+}
+
+class TextInput extends FreeformInput
+{
+    function render($attr = null)
+    {
+        $this->set_attr($attr);
         $this->type = 'text';
-        return '<input ' . $this->get_attr_str() . '/>';
+        return '<input ' . $this->get_attr_str() . ' class="_text_"/>';
     }
 }
 
-class RadioInput extends Input
+class RadioInput extends CheckedInput
 {
-    function render($name, $value)
+    function render($attr = null)
     {
+        $this->set_attr($attr);
         $this->type = 'radio';
-        //$this->value = $value;
-        if ($this->value == $value) {
-            $this->checked = true;
-        }
-        
         return '<input ' . $this->get_attr_str() . '/>';
     }
 }
 
-class CheckboxInput extends Input
+class CheckBoxInput extends CheckedInput
 {
-    function render($name, $value)
+    function render($attr = null)
     {
+        $this->set_attr($attr);
         $this->type = 'checkbox';
-        //$this->value = $value;
-        if ($this->value == $value) {
-            $this->checked = true;
-        }
-        
         return '<input ' . $this->get_attr_str() . '/>';
     }
 }
 
-class TextareaInput extends Input
+class TextAreaInput extends FreeformInput
 {
-    function render($name, $value)
+	public $value;
+	
+    function render($attr = null)
     {
-        return '<textarea ' . $this->get_attr_str() . '>' . htmlspecialchars($value) . '</textarea>';
+        $this->set_attr($attr);
+        return '<textarea ' . $this->get_attr_str() . '>' . htmlspecialchars($this->value) . '</textarea>';
     }
 }
 
-class SelectInput extends Input
+class SelectInput extends FreeformInput
 {
-    public $attributes = '';
-    public $items = array();
+	public $value;
+    public $options = array();
     
-    public function __construct($items, $attr = null)
+    function set_options($options)
     {
-        parent::__construct($attr);
-        $this->items = $items;
+    	$this->options = $options;
+    	return $this;
     }
     
-    function render($name, $value)
+    function render($attr = null)
     {
+        $this->set_attr($attr);
         $html = '<select ' . $this->get_attr_str() . ">\n";
         
         // Detect key names.
-        $first = @$this->items[0];
+        $first = @$this->options[0];
         $first_keys = @array_keys($first);
         $valuekey = @$first_keys[0] or 0;
         $namekey = @$first_keys[1] or 1;
         
-        foreach ($this->items as $item) {
-            
-            $selected = ($item[$valuekey] == $value) ? ' selected' : '';
-            $html .= '<option value="' . htmlspecialchars($item[$valuekey]) . '"' . $selected . '>' . htmlspecialchars($item[$namekey]) . "</option>\n";
+        if ($this->options) {
+	        foreach ($this->options as $item) {
+	            $selected = ($item[$valuekey] == $this->value) ? ' selected' : '';
+	            $html .= '<option value="' . htmlspecialchars($item[$valuekey]) . '"' . $selected . '>' . htmlspecialchars($item[$namekey]) . "</option>\n";
+	        }
         }
         $html .= '</select>';
+        $html .= $this->append;
         return $html;
     }
 }
 
-
-
-class ValidationError extends Exception
+class DecoratorInput extends FreeformInput
 {
-
+	protected $input;
+	
+	public function __construct(FreeformInput $input)
+	{
+		$this->input = $input;
+	}
+	
+	public function set_submitted_value($value)
+	{
+		$this->input->set_submitted_value($value);
+	}
+	
+	public function append_html($html)
+	{
+		$this->input->append_html($html);
+	}
+	
+	public function toString()
+	{
+		return $this->render();
+	}
+	
+	public function __get($key)
+	{
+		return $this->input->{$key};
+	}
+	
+	public function __set($key, $val)
+	{
+		$this->input->{$key} = $val;
+	}
+	
+	public function __call($method, $args)
+	{
+		return call_user_func_array(array($this->input, $method), $args);
+	}
 }
