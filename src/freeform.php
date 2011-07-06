@@ -426,6 +426,16 @@ class HiddenInput extends FreeformInput
     }
 }
 
+class ButtonInput extends FreeformInput
+{
+    function render($attr = null)
+    {
+        $this->set_attr($attr);
+        $this->type = 'button';
+        return '<input ' . $this->get_attr_str() . '/>';
+    }
+}
+
 class SubmitInput extends FreeformInput
 {
     function render($attr = null)
