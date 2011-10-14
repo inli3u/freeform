@@ -3,7 +3,7 @@
 require_once('src/freeform.php');
 
 // Form definition.
-class ExampleForm extends Form
+class ExampleForm extends Freeform::Form
 {
     public function config()
     {
