@@ -8,7 +8,7 @@ class Freeform implements IteratorAggregate
     
     static public function Select($attr = null, $rules = null)
     {
-    	return new SelectInput($attr, $rules);
+        return new SelectInput($attr, $rules);
     }
     
     public function __construct($data = array())
@@ -80,7 +80,28 @@ class Freeform implements IteratorAggregate
         $this->fields[$id] = $input;
     }
     
-    public static function parse_attr($str)
+}
+
+
+class FAttributes
+{
+
+    public function encode($list)
+    {
+        $pairs = array();
+        foreach ($list as $key => $value) {
+            if ($value === false || $value === null) {
+                // Skip.
+            } elseif ($value === true) {
+                $pairs[] = $key . '="' . $key . '"';
+            } else {
+                $pairs[] = $key . '="' . htmlspecialchars($value) . '"';
+            }
+        }
+        return implode(' ', $pairs);
+    }
+    
+    public static function decode($str)
     {
         $CHARS_WHITESPACE = " \n\r\t";
         $CHARS_QUOTE = '\'"';
@@ -184,85 +205,100 @@ class Freeform implements IteratorAggregate
     }
 }
 
-class FFValidate
+
+
+class FValidate
 {
-	private $lang = array(
-		'required' => 'This field is required',
-	);
-	
-	public function validation_error($lang_key, $args = array())
-	{
-		$str = array_key_exists($lang_key, $this->lang) ? $this->lang[$lang_key] : 'Text resource "' . $lang_key . '" not found';
-		if (count($args)) {
-			$str = vsprintf($str, $args);
-		}
-		throw new ValidationError($str);
-	}
-	
-	public function test($value, $rule)
-	{
-		
-	}
-	
-	public function test_required($value)
-	{
-		if (strlen($this->value) === 0) {
-			$this->validation_error('required');
-		}
-	}
-	
-	public function test_minlength($value, $length)
-	{
-		return strlen($value) >= $length;
-	}
-	
+    private $lang = array(
+        'required' => 'This field is required',
+    );
+    
+    public function error($lang_key, $args = array())
+    {
+        $str = array_key_exists($lang_key, $this->lang) ? $this->lang[$lang_key] : 'Text resource "' . $lang_key . '" not found';
+        if (count($args)) {
+            $str = vsprintf($str, $args);
+        }
+        throw new ValidationError($str);
+    }
+    
+    public function test($value, $rule)
+    {
+        // Run $rule on $value
+    }
+
+    public function required($value)
+    {
+        if (strlen($this->value) === 0) {
+            $this->error('required');
+            return false;
+        }
+        return true;
+    }
+    
+    public function minlength($value, $length)
+    {
+        if (strlen($value) < $length) {
+            $this->error('minlength');
+            return false;
+        }
+        return true;
+    }
+
+    public function maxlength($value, $length)
+    {
+        if (strlen($value) > $length) {
+            $this->error('maxlength');
+            return false;
+        }
+        return true;
+    }
+
     public function validate($value, $rules)
     {
-		
+        
         foreach ($this->rules as $rule => $arg) {
-			$this->test($value, $rule, $arg);
-		}
-		
-		{
-            switch ($rule)
-            {
-                case 'required':
-                    // TODO: support required based on callback.
-                    if (strlen($this->value) === 0) {
-                        throw new ValidationError('This field is required.');
-                    }
-                    break;
-                case 'minlength':
-                    if (strlen($this->value) < $arg) {
-                        throw new ValidationError(sprintf('A minimum of %s characters are required.', $arg));
-                    }
-                    break;
-                case 'maxlength':
-                    if (strlen($this->value) > $arg) {
-                        throw new ValidationError(sprintf('A maximum of %s characters are allowed.', $arg));
-                    }
-                    break;
-                case 'min':
-                    if ((int)$this->value < (int)$arg) {
-                        throw new ValidationError(sprintf('Value must be greater than %s', $arg));
-                    }
-                    break;
-                case 'max':
-                    if ((int)$this->value > (int)$arg) {
-                        throw new ValidationError(sprintf('Value must be less than %s', $arg));
-                    }
-                    break;
-                case 'email':
-                    break;
-                case 'url':
-                    break;
-                case 'date':
-                    break;
-                case 'callback':
-                    // TODO: throw error if callback returns false. In client side validation,
-                    // use remote validation of the method.
-                    break;
-            }
+            $this->test($value, $rule, $arg);
+        }
+        
+        switch ($rule)
+        {
+            case 'required':
+                // TODO: support required based on callback.
+                if (strlen($this->value) === 0) {
+                    throw new ValidationError('This field is required.');
+                }
+                break;
+            case 'minlength':
+                if (strlen($this->value) < $arg) {
+                    throw new ValidationError(sprintf('A minimum of %s characters are required.', $arg));
+                }
+                break;
+            case 'maxlength':
+                if (strlen($this->value) > $arg) {
+                    throw new ValidationError(sprintf('A maximum of %s characters are allowed.', $arg));
+                }
+                break;
+            case 'min':
+                if ((int)$this->value < (int)$arg) {
+                    throw new ValidationError(sprintf('Value must be greater than %s', $arg));
+                }
+                break;
+            case 'max':
+                if ((int)$this->value > (int)$arg) {
+                    throw new ValidationError(sprintf('Value must be less than %s', $arg));
+                }
+                break;
+            case 'email':
+                break;
+            case 'url':
+                break;
+            case 'date':
+                break;
+            case 'callback':
+                // TODO: throw error if callback returns false. In client side validation,
+                // use remote validation of the method.
+                break;
         }
     }
     
@@ -282,130 +318,11 @@ class FFValidate
     }
 }
 
-/*
-class FreeformField
-{
-    public $form;
-    //public $value;
-    public $view;
-    public $rules = array();
-    
-    
-    public function __construct($view, $view_params = null, $rules = null)
-    {
-        if (!$view instanceof FreeformInput) {
-            // Init from class name.
-            $view .= 'Input';
-            $view = new $view();
-        }
-        $this->view = $view;
-        $this->view->set_attr($view_params);
-        $this->set_rules($rules);
-    }
-    
-    public function set_rules($rules)
-    {
-        $this->rules = !is_array($rules) ? Freeform::parse_attr($rules) : $rules;
-    }
-    
-    function render()
-    {
-        if ($this->form->readonly) {
-            return $this->value;
-        } else {
-            return $this->view->render($this->name, $this->value);
-        }
-    }
-    
-    public function validate()
-    {
-        foreach ($this->rules as $rule => $arg) {
-            switch ($rule)
-            {
-                case 'required':
-                    // TODO: support required based on callback.
-                    if (strlen($this->value) === 0) {
-                        throw new ValidationError('This field is required.');
-                    }
-                    break;
-                case 'minlength':
-                    if (strlen($this->value) < $arg) {
-                        throw new ValidationError(sprintf('A minimum of %s characters are required.', $arg));
-                    }
-                    break;
-                case 'maxlength':
-                    if (strlen($this->value) > $arg) {
-                        throw new ValidationError(sprintf('A maximum of %s characters are allowed.', $arg));
-                    }
-                    break;
-                case 'min':
-                    if ((int)$this->value < (int)$arg) {
-                        throw new ValidationError(sprintf('Value must be greater than %s', $arg));
-                    }
-                    break;
-                case 'max':
-                    if ((int)$this->value > (int)$arg) {
-                        throw new ValidationError(sprintf('Value must be less than %s', $arg));
-                    }
-                    break;
-                case 'email':
-                    break;
-                case 'url':
-                    break;
-                case 'date':
-                    break;
-                case 'callback':
-                    // TODO: throw error if callback returns false. In client side validation,
-                    // use remote validation of the method.
-                    break;
-            }
-        }
-    }
-    
-    public function is_valid()
-    {
-        try {
-            $this->validate();
-            return true;
-        } catch (ValidationError $e) {
-            return false;
-        }
-    }
-    
-    public function get_error()
-    {
-        try {
-            $this->validate();
-            return null;
-        } catch (ValidationError $e) {
-            return $e->getMessage();
-        }
-    }
-    
-    public function __isset($key)
-    {
-        return isset($this->view->{$key});
-    }
-    
-    public function __get($key)
-    {
-        return @$this->view->{$key};
-    }
-    
-    public function __set($key, $value)
-    {
-        $this->view->{$key} = $value;
-    }
-    
-    public function __toString()
-    {
-        return $this->value;
-    }
-}
-*/
 
-abstract class FreeformInput {
-	public $form = null;
+
+abstract class FBaseInput {
+    public $form = null;
+    public $value = null;
     protected $elem = null;
     protected $attr = array();
     protected $rules = array();
@@ -440,200 +357,207 @@ abstract class FreeformInput {
     
     public function set_submitted_value($value)
     {
-    	$this->value = $value;
+        $this->value = $value;
     }
     
     public function set_attr($attr)
     {
-    	if (!is_null($attr)) {
-        	$this->attr = (is_array($attr) ? $attr : Freeform::parse_attr($attr)) + $this->attr;
+        if (!is_null($attr)) {
+            $this->attr = (is_array($attr) ? $attr : FAttributes::decode($attr)) + $this->attr;
+        }
+
+        // Value is only an attribute of the <input> tag. It's not universal.
+        if (array_key_exists('value', $this->attr)) {
+            $this->value = $this->attr['value'];
+            unset($this->attr['value']);
         }
     }
     
     public function set_rules($rules)
     {
-    	if (!is_null($rules)) {
-        	$this->rules = (is_array($rules) ? $rules : Freeform::parse_attr($rules)) + $this->rules;
+        if (!is_null($rules)) {
+            $this->rules = (is_array($rules) ? $rules : FAttributes::decode($rules)) + $this->rules;
         }
     }
     
-    public function get_attr_str()
+    public function test()
     {
-        $pairs = array();
-        foreach ($this->attr as $key => $value) {
-            if ($value === false || $value === null) {
-                // Skip.
-            } elseif ($value === true) {
-                $pairs[] = $key . '="' . $key . '"';
-            } else {
-                $pairs[] = $key . '="' . htmlspecialchars($value) . '"';
-            }
-        }
-        return implode(' ', $pairs);
+        $validate = new FValidate();
+        return $validate->test($this->value, $this->rules);
+    }
+
+    public function errors()
+    {
+        
+        $v = new FValidate();
+        $v->test($this->value, $this->rules);
+        return $v->errors();
     }
     
-	public function is_valid()
-	{
-		//FreeForm::
-	}
-	
-	public function validate()
-	{
-		if (!$this->is_valid()) {
-			//throw new Exception($message, $code, $previous)
-		}
-	}
+    public function validate()
+    {
+        if (!$this->is_valid()) {
+            //throw new Exception($message, $code, $previous)
+        }
+    }
 
     public function __toString()
     {
-    	return $this->render();
+        return $this->render();
     }
 }
 
-class Input extends FreeformInput
+class FInput extends FBaseInput
 {
     protected $forced_type;
     
-    public function render($attr = null)
+    public function render($user_attr = null)
     {
-        $this->set_attr($attr);
+        if (!is_array($user_attr)) {
+            $user_attr = array();
+        }
         if ($this->forced_type !== null) {
             $this->type = $this->forced_type;
         }
-        return '<input ' . $this->get_attr_str() . ' class="_text_"/>';
+        $value = array('value' => $this->value);
+        return '<input ' . FAttributes::encode(array_merge($this->attr, $value, $user_attr)) . ' />';
     }
 }
 
-abstract class CheckedInput extends Input
+abstract class FCheckedInput extends FInput
 {
     public function __construct($attr = null, $rules = null)
     {
-    	// Default value for checkboxes and radios.
+        // Default value for checkboxes and radios.
         $this->value = 1;
         parent::__construct($attr, $rules);
     }
     
-	public function set_submitted_value($value)
-	{
-		// Checkboxes and radios are different, the submitted value should not overwrite the value attr.
-		// Instead it will set the checked attr.
-		$this->checked = ($value == $this->value);
-	}
+    public function set_submitted_value($value)
+    {
+        // Checkboxes and radios are different, the submitted value should not overwrite the value attr.
+        // Instead it will set the checked attr.
+        $this->checked = ($value == $this->value);
+    }
 }
 
-class TextInput extends Input
+class FText extends FInput
 {
-	public function __construct($attr = null, $rules = null)
-	{
-		// Allow type to be overriden to support new text validation types.
-		$this->type = 'text';
-		parent::__construct($attr, $rules);
-	}
+    public function __construct($attr = null, $rules = null)
+    {
+        // Allow type to be overriden to support new text validation types.
+        $this->type = 'text';
+        parent::__construct($attr, $rules);
+    }
 }
 
-class RadioInput extends CheckedInput
+class FRadio extends FCheckedInput
 {
     protected $forced_type = 'radio';
 }
 
-class CheckboxInput extends CheckedInput
+class FCheckbox extends FCheckedInput
 {
     protected $forced_type = 'checkbox';
 }
 
-class HiddenInput extends Input
+class FHidden extends FInput
 {
-	protected $forced_type = 'hidden';
+    protected $forced_type = 'hidden';
 }
 
-class PasswordInput extends Input
+class FPassword extends FInput
 {
-	protected $forced_type = 'password';
+    protected $forced_type = 'password';
 }
 
-class SubmitInput extends Input
+class FSubmit extends FInput
 {
-	protected $forced_type = 'submit';
+    protected $forced_type = 'submit';
 }
 
-class NumberInput extends Input
+class FNumber extends FInput
 {
-	public function __construct($attr = null, $rules = null) {
-		parent::__construct($attr, $rules);
-		$this->forced_type = 'number';
-		$this->set_rules('number');
-	}
+    public function __construct($attr = null, $rules = null) {
+        parent::__construct($attr, $rules);
+        $this->forced_type = 'number';
+        $this->set_rules('number');
+    }
 }
 
-class RangeInput extends Input
+class FRange extends FInput
 {
-	protected $forced_type = 'range';
-	public function __construct($attr = null, $rules = null) {
-		parent::__construct($attr, $rules);
-		$this->forced_type = 'range';
-		$this->set_rules('number');
-	}
+    protected $forced_type = 'range';
+    public function __construct($attr = null, $rules = null) {
+        parent::__construct($attr, $rules);
+        $this->forced_type = 'range';
+        $this->set_rules('number');
+    }
 }
 
-class ColorInput extends Input
+class FColor extends FInput
 {
-	protected $forced_type = 'color';
+    protected $forced_type = 'color';
 }
 
-class FileInput extends Input
+class FFile extends FInput
 {
-	protected $forced_type = 'file';
+    protected $forced_type = 'file';
 }
 
-class ResetInput extends Input
+class FReset extends FInput
 {
-	protected $forced_type = 'reset';
+    protected $forced_type = 'reset';
 }
 
-class ButtonInput extends Input
+class FButton extends FInput
 {
-	protected $forced_type = 'button';
+    protected $forced_type = 'button';
 }
 
-class ImageInput extends Input
+class FImage extends FInput
 {
-	protected $forced_type = 'image';
+    protected $forced_type = 'image';
 }
 
 
 /*
- * 	datetime
-	date
-	month
-	week
-	time
-	datetime-local
+ *  datetime
+    date
+    month
+    week
+    time
+    datetime-local
  */
 
-class TextareaInput extends FreeformInput
+class FTextarea extends FBaseInput
 {
-    function render($attr = null)
+    function render($user_attr = null)
     {
-        $this->set_attr($attr);
-        return '<textarea ' . $this->get_attr_str() . '>' . htmlspecialchars($this->value) . '</textarea>';
+        if (!is_array($user_attr)) {
+            $user_attr = array();
+        }
+        return '<textarea ' . FAttributes::encode(array_merge($this->attr, $user_attr)) . '>' . htmlspecialchars($this->value) . '</textarea>';
     }
 }
 
-class SelectInput extends FreeformInput
+class FSelect extends FBaseInput
 {
     public $attributes = '';
     public $items = array();
     
     function set_items($items)
     {
-    	$this->items = $items;
-    	return $this;
+        $this->items = $items;
+        return $this;
     }
     
-    function render($attr = null)
+    function render($user_attr = null)
     {
-        $this->set_attr($attr);
-        $html = '<select ' . $this->get_attr_str() . ">\n";
+        if (!is_array($user_attr)) {
+            $user_attr = array();
+        }
+        $html = '<select ' . FAttributes::encode(array_merge($this->attr, $user_attr)) . ">\n";
         
         // Detect key names.
         $first = @$this->items[0];
@@ -642,12 +566,14 @@ class SelectInput extends FreeformInput
         $namekey = @$first_keys[1] or 1;
         
         if ($this->items) {
-	        foreach ($this->items as $item) {
-	            $selected = ($item[$valuekey] == $this->value) ? ' selected' : '';
-	            $html .= '<option value="' . htmlspecialchars($item[$valuekey]) . '"' . $selected . '>' . htmlspecialchars($item[$namekey]) . "</option>\n";
-	        }
+            foreach ($this->items as $item) {
+                $selected = ($item[$valuekey] == $this->value) ? ' selected' : '';
+                $html .= '<option value="' . htmlspecialchars($item[$valuekey]) . '"' . $selected . '>' . htmlspecialchars($item[$namekey]) . "</option>\n";
+            }
         }
         $html .= '</select>';
         return $html;
     }
 }
+
+// vim: set ts=4 sw=4 et
