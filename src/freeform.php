@@ -3,7 +3,7 @@
 class Freeform implements IteratorAggregate
 {
     protected $fields = array();
-    protected $data = array();
+    private $data = array();
     public $readonly = false;
     
     static public function Select($attr = null, $rules = null)
@@ -40,14 +40,14 @@ class Freeform implements IteratorAggregate
         return $errors;
     }
     
-    public function is_valid()
+    public function has_errors()
     {
         foreach ($this->fields as $field) {
             if (!$field->is_valid()) {
-                return false;
+                return true;
             }
         }
-        return true;
+        return false;
     }
     
     public function __get($key)
@@ -74,6 +74,7 @@ class Freeform implements IteratorAggregate
             $input->id = $id;
         }
         if (isset($this->data[$id])) {
+            //$input->value = $this->data[$id];
             $input->set_submitted_value($this->data[$id]);
         }
         $this->fields[$id] = $input;
@@ -181,8 +182,91 @@ class Freeform implements IteratorAggregate
         
         return $attr;
     }
+}
+
+class FFValidate
+{
+	private $lang = array(
+		'required' => 'This field is required',
+	);
+	
+	public function validation_error($lang_key, $args = array())
+	{
+		$str = array_key_exists($lang_key, $this->lang) ? $this->lang[$lang_key] : 'Text resource "' . $lang_key . '" not found';
+		if (count($args)) {
+			$str = vsprintf($str, $args);
+		}
+		throw new ValidationError($str);
+	}
+	
+	public function test($value, $rule)
+	{
+		
+	}
+	
+	public function test_required($value)
+	{
+		if (strlen($this->value) === 0) {
+			$this->validation_error('required');
+		}
+	}
+	
+	public function test_minlength($value, $length)
+	{
+		return strlen($value) >= $length;
+	}
+	
+    public function validate($value, $rules)
+    {
+		
+        foreach ($this->rules as $rule => $arg) {
+			$this->test($value, $rule, $arg);
+		}
+		
+		{
+            switch ($rule)
+            {
+                case 'required':
+                    // TODO: support required based on callback.
+                    if (strlen($this->value) === 0) {
+                        throw new ValidationError('This field is required.');
+                    }
+                    break;
+                case 'minlength':
+                    if (strlen($this->value) < $arg) {
+                        throw new ValidationError(sprintf('A minimum of %s characters are required.', $arg));
+                    }
+                    break;
+                case 'maxlength':
+                    if (strlen($this->value) > $arg) {
+                        throw new ValidationError(sprintf('A maximum of %s characters are allowed.', $arg));
+                    }
+                    break;
+                case 'min':
+                    if ((int)$this->value < (int)$arg) {
+                        throw new ValidationError(sprintf('Value must be greater than %s', $arg));
+                    }
+                    break;
+                case 'max':
+                    if ((int)$this->value > (int)$arg) {
+                        throw new ValidationError(sprintf('Value must be less than %s', $arg));
+                    }
+                    break;
+                case 'email':
+                    break;
+                case 'url':
+                    break;
+                case 'date':
+                    break;
+                case 'callback':
+                    // TODO: throw error if callback returns false. In client side validation,
+                    // use remote validation of the method.
+                    break;
+            }
+        }
+    }
     
-    function get_jquery_rules()
+    public function get_jquery_rules()
     {
         $obj;
         foreach ($this->fields as $id => $field) {
@@ -325,8 +409,9 @@ abstract class FreeformInput {
     protected $elem = null;
     protected $attr = array();
     protected $rules = array();
-    protected $append = '';
     
+    public abstract function render();
+
     public function __construct($attr = null, $rules = null)
     {
         $this->set_attr($attr);
@@ -387,18 +472,39 @@ abstract class FreeformInput {
         return implode(' ', $pairs);
     }
     
-    public function append_html($html)
-    {
-    	$this->append = $html;
-    }
-    
+	public function is_valid()
+	{
+		//FreeForm::
+	}
+	
+	public function validate()
+	{
+		if (!$this->is_valid()) {
+			//throw new Exception($message, $code, $previous)
+		}
+	}
+
     public function __toString()
     {
     	return $this->render();
     }
 }
 
-abstract class CheckedInput extends FreeformInput
+class Input extends FreeformInput
+{
+    protected $forced_type;
+    
+    public function render($attr = null)
+    {
+        $this->set_attr($attr);
+        if ($this->forced_type !== null) {
+            $this->type = $this->forced_type;
+        }
+        return '<input ' . $this->get_attr_str() . ' class="_text_"/>';
+    }
+}
+
+abstract class CheckedInput extends Input
 {
     public function __construct($attr = null, $rules = null)
     {
@@ -415,71 +521,97 @@ abstract class CheckedInput extends FreeformInput
 	}
 }
 
-
-class HiddenInput extends FreeformInput
+class TextInput extends Input
 {
-    function render($attr = null)
-    {
-        $this->set_attr($attr);
-        $this->type = 'hidden';
-        return '<input ' . $this->get_attr_str() . '/>';
-    }
-}
-
-class ButtonInput extends FreeformInput
-{
-    function render($attr = null)
-    {
-        $this->set_attr($attr);
-        $this->type = 'button';
-        return '<input ' . $this->get_attr_str() . '/>';
-    }
-}
-
-class SubmitInput extends FreeformInput
-{
-    function render($attr = null)
-    {
-        $this->set_attr($attr);
-        $this->type = 'submit';
-        return '<input ' . $this->get_attr_str() . '/>';
-    }
-}
-
-class TextInput extends FreeformInput
-{
-    function render($attr = null)
-    {
-        $this->set_attr($attr);
-        $this->type = 'text';
-        return '<input ' . $this->get_attr_str() . ' class="_text_"/>';
-    }
+	public function __construct($attr = null, $rules = null)
+	{
+		// Allow type to be overriden to support new text validation types.
+		$this->type = 'text';
+		parent::__construct($attr, $rules);
+	}
 }
 
 class RadioInput extends CheckedInput
 {
-    function render($attr = null)
-    {
-        $this->set_attr($attr);
-        $this->type = 'radio';
-        return '<input ' . $this->get_attr_str() . '/>';
-    }
+    protected $forced_type = 'radio';
 }
 
-class CheckBoxInput extends CheckedInput
+class CheckboxInput extends CheckedInput
 {
-    function render($attr = null)
-    {
-        $this->set_attr($attr);
-        $this->type = 'checkbox';
-        return '<input ' . $this->get_attr_str() . '/>';
-    }
+    protected $forced_type = 'checkbox';
 }
 
-class TextAreaInput extends FreeformInput
+class HiddenInput extends Input
 {
-	public $value;
-	
+	protected $forced_type = 'hidden';
+}
+
+class PasswordInput extends Input
+{
+	protected $forced_type = 'password';
+}
+
+class SubmitInput extends Input
+{
+	protected $forced_type = 'submit';
+}
+
+class NumberInput extends Input
+{
+	public function __construct($attr = null, $rules = null) {
+		parent::__construct($attr, $rules);
+		$this->forced_type = 'number';
+		$this->set_rules('number');
+	}
+}
+
+class RangeInput extends Input
+{
+	protected $forced_type = 'range';
+	public function __construct($attr = null, $rules = null) {
+		parent::__construct($attr, $rules);
+		$this->forced_type = 'range';
+		$this->set_rules('number');
+	}
+}
+
+class ColorInput extends Input
+{
+	protected $forced_type = 'color';
+}
+
+class FileInput extends Input
+{
+	protected $forced_type = 'file';
+}
+
+class ResetInput extends Input
+{
+	protected $forced_type = 'reset';
+}
+
+class ButtonInput extends Input
+{
+	protected $forced_type = 'button';
+}
+
+class ImageInput extends Input
+{
+	protected $forced_type = 'image';
+}
+
+
+/*
+ * 	datetime
+	date
+	month
+	week
+	time
+	datetime-local
+ */
+
+class TextareaInput extends FreeformInput
+{
     function render($attr = null)
     {
         $this->set_attr($attr);
@@ -489,12 +621,12 @@ class TextAreaInput extends FreeformInput
 
 class SelectInput extends FreeformInput
 {
-	public $value;
-    public $options = array();
+    public $attributes = '';
+    public $items = array();
     
-    function set_options($options)
+    function set_items($items)
     {
-    	$this->options = $options;
+    	$this->items = $items;
     	return $this;
     }
     
@@ -504,59 +636,18 @@ class SelectInput extends FreeformInput
         $html = '<select ' . $this->get_attr_str() . ">\n";
         
         // Detect key names.
-        $first = @$this->options[0];
+        $first = @$this->items[0];
         $first_keys = @array_keys($first);
         $valuekey = @$first_keys[0] or 0;
         $namekey = @$first_keys[1] or 1;
         
-        if ($this->options) {
-	        foreach ($this->options as $item) {
+        if ($this->items) {
+	        foreach ($this->items as $item) {
 	            $selected = ($item[$valuekey] == $this->value) ? ' selected' : '';
 	            $html .= '<option value="' . htmlspecialchars($item[$valuekey]) . '"' . $selected . '>' . htmlspecialchars($item[$namekey]) . "</option>\n";
 	        }
         }
         $html .= '</select>';
-        $html .= $this->append;
         return $html;
     }
-}
-
-class DecoratorInput extends FreeformInput
-{
-	protected $input;
-	
-	public function __construct(FreeformInput $input)
-	{
-		$this->input = $input;
-	}
-	
-	public function set_submitted_value($value)
-	{
-		$this->input->set_submitted_value($value);
-	}
-	
-	public function append_html($html)
-	{
-		$this->input->append_html($html);
-	}
-	
-	public function toString()
-	{
-		return $this->render();
-	}
-	
-	public function __get($key)
-	{
-		return $this->input->{$key};
-	}
-	
-	public function __set($key, $val)
-	{
-		$this->input->{$key} = $val;
-	}
-	
-	public function __call($method, $args)
-	{
-		return call_user_func_array(array($this->input, $method), $args);
-	}
 }
