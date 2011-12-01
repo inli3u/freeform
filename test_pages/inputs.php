@@ -3,21 +3,26 @@
 require_once('../src/freeform.php');
 
 $classes = array(
-    'FText',
-    'FRadio',
-    'FCheckbox',
+    'FInput',
     'FHidden',
+    'FText',
     'FPassword',
-    'FSubmit',
+    'FSearch',
+    'FEmail',
+    'FUrl',
+    'FTel',
     'FNumber',
     'FRange',
     'FColor',
     'FFile',
-    'FReset',
-    'FButton',
-    'FImage',
+    'FRadio',
+    'FCheckbox',
     'FTextarea',
     'FSelect',
+    'FImage',
+    'FButton',
+    'FSubmit',
+    'FReset',
 );
 
 $examples = array();

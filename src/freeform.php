@@ -86,7 +86,7 @@ class Freeform implements IteratorAggregate
 class FAttributes
 {
 
-    public function encode($list)
+    public static function encode($list)
     {
         $pairs = array();
         foreach ($list as $key => $value) {
@@ -476,6 +476,26 @@ class FSubmit extends FInput
     protected $forced_type = 'submit';
 }
 
+class FEmail extends FInput
+{
+    protected $forced_type = 'email';
+}
+
+class FTel extends FInput
+{
+    protected $forced_type = 'tel';
+}
+
+class FUrl extends FInput
+{
+    protected $forced_type = 'url';
+}
+
+class FSearch extends FInput
+{
+    protected $forced_type = 'search';
+}
+
 class FNumber extends FInput
 {
     public function __construct($attr = null, $rules = null) {
@@ -545,6 +565,8 @@ class FSelect extends FBaseInput
 {
     public $attributes = '';
     public $items = array();
+    public $selected_index = -1;
+    public $length = 0;
     
     function set_items($items)
     {

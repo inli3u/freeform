@@ -3,21 +3,25 @@
 require_once('../src/freeform.php');
 
 $classes = array(
-    'FText',
-    'FRadio',
-    'FCheckbox',
     'FHidden',
+    'FText',
     'FPassword',
-    'FSubmit',
+    'FSearch',
+    'FEmail',
+    'FUrl',
+    'FTel',
     'FNumber',
     'FRange',
     'FColor',
     'FFile',
-    'FReset',
-    'FButton',
-    'FImage',
+    'FRadio',
+    'FCheckbox',
     'FTextarea',
     'FSelect',
+    'FImage',
+    'FButton',
+    'FSubmit',
+    'FReset',
 );
 
 $examples = array();
@@ -51,4 +55,4 @@ div.preview {display: inline-block; }
     <?php endforeach; ?>
 </ul>
 
-// vim: set ts=4 sw=4 et
+<?php // vim: set ts=4 sw=4 et ?>
