@@ -586,8 +586,8 @@ class FSelect extends FControl
             break;
         case 'selectedIndex':
             $this->_selectedIndex = $value;
-            $this->value = @$this->options[$this->_selectedIndex];
-            break
+            $this->value = @$this->options[$this->_selectedIndex][0];
+            break;
         default:
             parent::__set($key, $value);
         }
@@ -604,7 +604,7 @@ class FSelect extends FControl
 
     public function remove($index)
     {
-        array_splice($this->options, $index, 1));
+        array_splice($this->options, $index, 1);
     }
 
     public function clear()
@@ -626,8 +626,8 @@ class FSelect extends FControl
         $namekey = @$first_keys[1] or 1;
         
         if ($this->options) {
-            foreach ($this->options as $item) {
-                $selected = ($item[$valuekey] == $this->value) ? ' selected' : '';
+            foreach ($this->options as $i => $item) {
+                $selected = ($i == $this->_selectedIndex || $item[$valuekey] == $this->value) ? ' selected' : '';
                 $html .= '<option value="' . htmlspecialchars($item[$valuekey]) . '"' . $selected . '>' . htmlspecialchars($item[$namekey]) . "</option>\n";
             }
         }
