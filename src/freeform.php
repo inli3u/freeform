@@ -320,7 +320,7 @@ class FValidate
 
 
 
-abstract class FBaseInput {
+abstract class FControl {
     public $form = null;
     public $value = null;
     protected $elem = null;
@@ -407,7 +407,7 @@ abstract class FBaseInput {
     }
 }
 
-class FInput extends FBaseInput
+class FInput extends FControl
 {
     protected $forced_type;
     
@@ -550,7 +550,7 @@ class FImage extends FInput
     datetime-local
  */
 
-class FTextarea extends FBaseInput
+class FTextarea extends FControl
 {
     function render($user_attr = null)
     {
@@ -561,17 +561,55 @@ class FTextarea extends FBaseInput
     }
 }
 
-class FSelect extends FBaseInput
+class FSelect extends FControl
 {
     public $attributes = '';
-    public $items = array();
-    public $selected_index = -1;
-    public $length = 0;
-    
-    function set_items($items)
+    public $options = array();
+    private $_selectedIndex = -1;
+
+    public function __get($key)
     {
-        $this->items = $items;
-        return $this;
+        switch ($key) {
+        case 'length':
+            return count($this->options);
+        case 'selectedIndex':
+            return $this->_selectedIndex;
+        default:
+            return parent::__get($key);
+        }
+    }
+
+    public function __set($key, $value)
+    {
+        switch ($key) {
+        case 'length':
+            break;
+        case 'selectedIndex':
+            $this->_selectedIndex = $value;
+            $this->value = @$this->options[$this->_selectedIndex];
+            break
+        default:
+            parent::__set($key, $value);
+        }
+    }
+    
+    public function add($option, $beforeIndex = null)
+    {
+        if ($beforeIndex === null) {
+            $this->options[] = $option;
+        } else {
+            array_splice($this->options, $beforeIndex, 0, $option);
+        }
+    }
+
+    public function remove($index)
+    {
+        array_splice($this->options, $index, 1));
+    }
+
+    public function clear()
+    {
+        $this->options = array();
     }
     
     function render($user_attr = null)
@@ -582,13 +620,13 @@ class FSelect extends FBaseInput
         $html = '<select ' . FAttributes::encode(array_merge($this->attr, $user_attr)) . ">\n";
         
         // Detect key names.
-        $first = @$this->items[0];
+        $first = @$this->options[0];
         $first_keys = @array_keys($first);
         $valuekey = @$first_keys[0] or 0;
         $namekey = @$first_keys[1] or 1;
         
-        if ($this->items) {
-            foreach ($this->items as $item) {
+        if ($this->options) {
+            foreach ($this->options as $item) {
                 $selected = ($item[$valuekey] == $this->value) ? ' selected' : '';
                 $html .= '<option value="' . htmlspecialchars($item[$valuekey]) . '"' . $selected . '>' . htmlspecialchars($item[$namekey]) . "</option>\n";
             }
