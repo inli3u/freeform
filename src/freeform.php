@@ -206,6 +206,10 @@ class FValidate
 {
     private $lang = array(
         'required' => 'This field is required',
+        'minlength' => 'A minimum of %s character(s) is required.',
+        'maxlength' => 'A maximum of %s character(s) is allowed.',
+        'min' => 'Value must be greater than %s',
+        'max' => 'Value must be less than %s',
     );
     
     public function error($langKey, $args = array())
@@ -214,12 +218,17 @@ class FValidate
         if (count($args)) {
             $str = vsprintf($str, $args);
         }
-        throw new ValidationError($str);
+        throw new Exception($str);
     }
     
-    public function test($value, $rule)
+    public function test($value, $rules)
     {
-        // Run $rule on $value
+        print_r($rules);
+        $isValid = true;
+        foreach ($rules as $rule => $arg) {
+            $isValid = $isValid && $this->{$rule}($value, $arg);
+        }
+        return $isValid;
     }
 
     public function required($value)
@@ -234,7 +243,7 @@ class FValidate
     public function minlength($value, $length)
     {
         if (strlen($value) < $length) {
-            $this->error('minlength');
+            $this->error('minlength', array($length));
             return false;
         }
         return true;
@@ -242,8 +251,27 @@ class FValidate
 
     public function maxlength($value, $length)
     {
+        echo "maxlength: $value, $length<br>";
         if (strlen($value) > $length) {
-            $this->error('maxlength');
+            $this->error('maxlength', array($length));
+            return false;
+        }
+        return true;
+    }
+
+    public function min($value, $min)
+    {
+        if ($value < $min) {
+            $this->error('min', array($min));
+            return false;
+        }
+        return true;
+    }
+
+    public function max($value, $max)
+    {
+        if ($value > $max) {
+            $this->error('max', array($max));
             return false;
         }
         return true;
@@ -251,49 +279,8 @@ class FValidate
 
     public function validate($value, $rules)
     {
-        
         foreach ($this->rules as $rule => $arg) {
             $this->test($value, $rule, $arg);
-        }
-        
-        switch ($rule)
-        {
-            case 'required':
-                // TODO: support required based on callback.
-                if (strlen($this->value) === 0) {
-                    throw new ValidationError('This field is required.');
-                }
-                break;
-            case 'minlength':
-                if (strlen($this->value) < $arg) {
-                    throw new ValidationError(sprintf('A minimum of %s characters are required.', $arg));
-                }
-                break;
-            case 'maxlength':
-                if (strlen($this->value) > $arg) {
-                    throw new ValidationError(sprintf('A maximum of %s characters are allowed.', $arg));
-                }
-                break;
-            case 'min':
-                if ((int)$this->value < (int)$arg) {
-                    throw new ValidationError(sprintf('Value must be greater than %s', $arg));
-                }
-                break;
-            case 'max':
-                if ((int)$this->value > (int)$arg) {
-                    throw new ValidationError(sprintf('Value must be less than %s', $arg));
-                }
-                break;
-            case 'email':
-                break;
-            case 'url':
-                break;
-            case 'date':
-                break;
-            case 'callback':
-                // TODO: throw error if callback returns false. In client side validation,
-                // use remote validation of the method.
-                break;
         }
     }
     
