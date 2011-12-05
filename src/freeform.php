@@ -6,11 +6,6 @@ class Freeform implements IteratorAggregate
     private $data = array();
     public $readonly = false;
     
-    static public function Select($attr = null, $rules = null)
-    {
-        return new SelectInput($attr, $rules);
-    }
-    
     public function __construct($data = array())
     {
         $this->data = $data;
@@ -561,11 +556,21 @@ class FTextarea extends FControl
     }
 }
 
+class FOption
+{
+    public $value;
+    public $text;
+
+    public function __construct($text = null, $value = null)
+    {
+        $this->text = $text;
+        $this->value = $value;
+    }
+}
+
 class FSelect extends FControl
 {
-    public $attributes = '';
-    public $options = array();
-    private $_selectedIndex = -1;
+    private $options = array();
 
     public function __get($key)
     {
@@ -573,7 +578,12 @@ class FSelect extends FControl
         case 'length':
             return count($this->options);
         case 'selectedIndex':
-            return $this->_selectedIndex;
+            for ($i = 0; $i < count($this->options); $i++) {
+                if ($this->options[$i]->value == $this->value) {
+                    return $i;
+                }
+            }
+            return -1;
         default:
             return parent::__get($key);
         }
@@ -583,17 +593,20 @@ class FSelect extends FControl
     {
         switch ($key) {
         case 'length':
+            if ($value < count($this->options)) {
+                $this->options = array_slice($this->options, 0, $value);
+            }
             break;
         case 'selectedIndex':
-            $this->_selectedIndex = $value;
-            $this->value = @$this->options[$this->_selectedIndex][0];
+            $this->value = @$this->options[$value]->value;
             break;
         default:
             parent::__set($key, $value);
+            break;
         }
     }
     
-    public function add($option, $beforeIndex = null)
+    public function add(FOption $option, $beforeIndex = null)
     {
         if ($beforeIndex === null) {
             $this->options[] = $option;
@@ -611,6 +624,29 @@ class FSelect extends FControl
     {
         $this->options = array();
     }
+
+    public function listOptions()
+    {
+        return $this->options;
+    }
+
+    public function option($index, $newOption = null)
+    {
+        if ($newOption === null) {
+            return @$this->options[$index];
+        } else {
+            $this->options[$index] = $newOption;
+        }
+    }
+
+    function fill($array, $textKey, $valueKey)
+    {
+        // Detect key names.
+        $first = @$this->options[0];
+        $first_keys = @array_keys($first);
+        $valuekey = @$first_keys[0] or 0;
+        $namekey = @$first_keys[1] or 1;
+    }
     
     function render($user_attr = null)
     {
@@ -618,18 +654,9 @@ class FSelect extends FControl
             $user_attr = array();
         }
         $html = '<select ' . FAttributes::encode(array_merge($this->attr, $user_attr)) . ">\n";
-        
-        // Detect key names.
-        $first = @$this->options[0];
-        $first_keys = @array_keys($first);
-        $valuekey = @$first_keys[0] or 0;
-        $namekey = @$first_keys[1] or 1;
-        
-        if ($this->options) {
-            foreach ($this->options as $i => $item) {
-                $selected = ($i == $this->_selectedIndex || $item[$valuekey] == $this->value) ? ' selected' : '';
-                $html .= '<option value="' . htmlspecialchars($item[$valuekey]) . '"' . $selected . '>' . htmlspecialchars($item[$namekey]) . "</option>\n";
-            }
+        foreach ($this->options as $i => $option) {
+            $selected = ($option->value == $this->value) ? ' selected' : '';
+            $html .= '<option value="' . htmlspecialchars($option->value) . '"' . $selected . '>' . htmlspecialchars($option->value) . "</option>\n";
         }
         $html .= '</select>';
         return $html;
