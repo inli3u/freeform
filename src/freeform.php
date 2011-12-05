@@ -22,7 +22,7 @@ class Freeform implements IteratorAggregate
         // Override.
     }
     
-    public function list_errors()
+    public function listErrors()
     {
         $errors = array();
         foreach ($this->fields as $field) {
@@ -35,10 +35,10 @@ class Freeform implements IteratorAggregate
         return $errors;
     }
     
-    public function has_errors()
+    public function hasErrors()
     {
         foreach ($this->fields as $field) {
-            if (!$field->is_valid()) {
+            if (!$field->isValid()) {
                 return true;
             }
         }
@@ -70,7 +70,7 @@ class Freeform implements IteratorAggregate
         }
         if (isset($this->data[$id])) {
             //$input->value = $this->data[$id];
-            $input->set_submitted_value($this->data[$id]);
+            $input->setSubmittedValue($this->data[$id]);
         }
         $this->fields[$id] = $input;
     }
@@ -208,9 +208,9 @@ class FValidate
         'required' => 'This field is required',
     );
     
-    public function error($lang_key, $args = array())
+    public function error($langKey, $args = array())
     {
-        $str = array_key_exists($lang_key, $this->lang) ? $this->lang[$lang_key] : 'Text resource "' . $lang_key . '" not found';
+        $str = array_key_exists($langKey, $this->lang) ? $this->lang[$langKey] : 'Text resource "' . $langKey . '" not found';
         if (count($args)) {
             $str = vsprintf($str, $args);
         }
@@ -297,7 +297,7 @@ class FValidate
         }
     }
     
-    public function get_jquery_rules()
+    public function getJQueryRules()
     {
         $obj;
         foreach ($this->fields as $id => $field) {
@@ -326,8 +326,8 @@ abstract class FControl {
 
     public function __construct($attr = null, $rules = null)
     {
-        $this->set_attr($attr);
-        $this->set_rules($rules);
+        $this->setAttr($attr);
+        $this->setRules($rules);
         $this->config();
     }
     
@@ -350,12 +350,12 @@ abstract class FControl {
         $this->attr[$key] = $value;
     }
     
-    public function set_submitted_value($value)
+    public function setSubmittedValue($value)
     {
         $this->value = $value;
     }
     
-    public function set_attr($attr)
+    public function setAttr($attr)
     {
         if (!is_null($attr)) {
             $this->attr = (is_array($attr) ? $attr : FAttributes::decode($attr)) + $this->attr;
@@ -368,7 +368,7 @@ abstract class FControl {
         }
     }
     
-    public function set_rules($rules)
+    public function setRules($rules)
     {
         if (!is_null($rules)) {
             $this->rules = (is_array($rules) ? $rules : FAttributes::decode($rules)) + $this->rules;
@@ -391,7 +391,7 @@ abstract class FControl {
     
     public function validate()
     {
-        if (!$this->is_valid()) {
+        if (!$this->isValid()) {
             //throw new Exception($message, $code, $previous)
         }
     }
@@ -404,18 +404,18 @@ abstract class FControl {
 
 class FInput extends FControl
 {
-    protected $forced_type;
+    protected $forcedType;
     
-    public function render($user_attr = null)
+    public function render($userAttr = null)
     {
-        if (!is_array($user_attr)) {
-            $user_attr = array();
+        if (!is_array($userAttr)) {
+            $userAttr = array();
         }
-        if ($this->forced_type !== null) {
-            $this->type = $this->forced_type;
+        if ($this->forcedType !== null) {
+            $this->type = $this->forcedType;
         }
         $value = array('value' => $this->value);
-        return '<input ' . FAttributes::encode(array_merge($this->attr, $value, $user_attr)) . ' />';
+        return '<input ' . FAttributes::encode(array_merge($this->attr, $value, $userAttr)) . ' />';
     }
 }
 
@@ -428,7 +428,7 @@ abstract class FCheckedInput extends FInput
         parent::__construct($attr, $rules);
     }
     
-    public function set_submitted_value($value)
+    public function setSubmittedValue($value)
     {
         // Checkboxes and radios are different, the submitted value should not overwrite the value attr.
         // Instead it will set the checked attr.
@@ -448,91 +448,91 @@ class FText extends FInput
 
 class FRadio extends FCheckedInput
 {
-    protected $forced_type = 'radio';
+    protected $forcedType = 'radio';
 }
 
 class FCheckbox extends FCheckedInput
 {
-    protected $forced_type = 'checkbox';
+    protected $forcedType = 'checkbox';
 }
 
 class FHidden extends FInput
 {
-    protected $forced_type = 'hidden';
+    protected $forcedType = 'hidden';
 }
 
 class FPassword extends FInput
 {
-    protected $forced_type = 'password';
+    protected $forcedType = 'password';
 }
 
 class FSubmit extends FInput
 {
-    protected $forced_type = 'submit';
+    protected $forcedType = 'submit';
 }
 
 class FEmail extends FInput
 {
-    protected $forced_type = 'email';
+    protected $forcedType = 'email';
 }
 
 class FTel extends FInput
 {
-    protected $forced_type = 'tel';
+    protected $forcedType = 'tel';
 }
 
 class FUrl extends FInput
 {
-    protected $forced_type = 'url';
+    protected $forcedType = 'url';
 }
 
 class FSearch extends FInput
 {
-    protected $forced_type = 'search';
+    protected $forcedType = 'search';
 }
 
 class FNumber extends FInput
 {
     public function __construct($attr = null, $rules = null) {
         parent::__construct($attr, $rules);
-        $this->forced_type = 'number';
-        $this->set_rules('number');
+        $this->forcedType = 'number';
+        $this->setRules('number');
     }
 }
 
 class FRange extends FInput
 {
-    protected $forced_type = 'range';
+    protected $forcedType = 'range';
     public function __construct($attr = null, $rules = null) {
         parent::__construct($attr, $rules);
-        $this->forced_type = 'range';
-        $this->set_rules('number');
+        $this->forcedType = 'range';
+        $this->setRules('number');
     }
 }
 
 class FColor extends FInput
 {
-    protected $forced_type = 'color';
+    protected $forcedType = 'color';
 }
 
 class FFile extends FInput
 {
-    protected $forced_type = 'file';
+    protected $forcedType = 'file';
 }
 
 class FReset extends FInput
 {
-    protected $forced_type = 'reset';
+    protected $forcedType = 'reset';
 }
 
 class FButton extends FInput
 {
-    protected $forced_type = 'button';
+    protected $forcedType = 'button';
 }
 
 class FImage extends FInput
 {
-    protected $forced_type = 'image';
+    protected $forcedType = 'image';
 }
 
 
@@ -547,12 +547,12 @@ class FImage extends FInput
 
 class FTextarea extends FControl
 {
-    function render($user_attr = null)
+    function render($userAttr = null)
     {
-        if (!is_array($user_attr)) {
-            $user_attr = array();
+        if (!is_array($userAttr)) {
+            $userAttr = array();
         }
-        return '<textarea ' . FAttributes::encode(array_merge($this->attr, $user_attr)) . '>' . htmlspecialchars($this->value) . '</textarea>';
+        return '<textarea ' . FAttributes::encode(array_merge($this->attr, $userAttr)) . '>' . htmlspecialchars($this->value) . '</textarea>';
     }
 }
 
@@ -643,17 +643,17 @@ class FSelect extends FControl
     {
         // Detect key names.
         $first = @$this->options[0];
-        $first_keys = @array_keys($first);
-        $valuekey = @$first_keys[0] or 0;
-        $namekey = @$first_keys[1] or 1;
+        $firstKeys = @array_keys($first);
+        $valuekey = @$firstKeys[0] or 0;
+        $namekey = @$firstKeys[1] or 1;
     }
     
-    function render($user_attr = null)
+    function render($userAttr = null)
     {
-        if (!is_array($user_attr)) {
-            $user_attr = array();
+        if (!is_array($userAttr)) {
+            $userAttr = array();
         }
-        $html = '<select ' . FAttributes::encode(array_merge($this->attr, $user_attr)) . ">\n";
+        $html = '<select ' . FAttributes::encode(array_merge($this->attr, $userAttr)) . ">\n";
         foreach ($this->options as $i => $option) {
             $selected = ($option->value == $this->value) ? ' selected' : '';
             $html .= '<option value="' . htmlspecialchars($option->value) . '"' . $selected . '>' . htmlspecialchars($option->value) . "</option>\n";
