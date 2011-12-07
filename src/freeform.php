@@ -218,7 +218,7 @@ class FValidate
         if (count($args)) {
             $str = vsprintf($str, $args);
         }
-        throw new Exception($str);
+        //throw new Exception($str);
     }
     
     public function test($value, $rules)
@@ -233,7 +233,7 @@ class FValidate
 
     public function required($value)
     {
-        if (strlen($this->value) === 0) {
+        if (strlen($value) === 0) {
             $this->error('required');
             return false;
         }
