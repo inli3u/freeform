@@ -277,6 +277,39 @@ class FValidate
         return true;
     }
 
+    public function pattern($value, $pattern)
+    {
+        if (!preg_match('/' . str_replace('/', '\\', $pattern) . '/', $value)) {
+            //$this->error('pattern');
+            return false;
+        }
+        return true;
+    }
+
+    public function email($value)
+    {
+        /*
+<ldh-str> ::= <let-dig-hyp> | <let-dig-hyp> <ldh-str>
+
+<let-dig-hyp> ::= <let-dig> | "-"
+
+<let-dig> ::= <letter> | <digit>
+
+<letter> ::= any one of the 52 alphabetic characters A through Z in
+upper case and a through z in lower case
+
+<digit> ::= any one of the ten digits 0 through 9
+         */ 
+        $atext = '[0-9a-zA-Z!#$%&\'*+-\/=?^_`{|}~]';
+        $ldh = '[0-9a-zA-Z-]';
+        $pattern = '/' . $atext . '+@' . $ldh . '+([.]' . $ldh . '+)*/';
+        if (!preg_match($pattern, $value)) {
+            //$this->error('emial');
+            return false;
+        }
+        return true;
+    }
+
     public function validate($value, $rules)
     {
         foreach ($this->rules as $rule => $arg) {
