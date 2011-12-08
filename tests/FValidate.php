@@ -54,8 +54,8 @@ class FValidateTest extends PHPUnit_Framework_TestCase
     public function testPattern()
     {
         $pattern = '[0-9][A-Z]{3}';
-        $this->assertTrue($this->validate->pattern($pattern, '3ABC'));
-        $this->assertFalse($this->validate->pattern($pattern, '22FF'));
+        $this->assertTrue($this->validate->pattern('3ABC', $pattern));
+        $this->assertFalse($this->validate->pattern('22FF', $pattern));
     }
 
     public function testEmail()

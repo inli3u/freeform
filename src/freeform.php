@@ -2,13 +2,15 @@
 
 class Freeform implements IteratorAggregate
 {
+    public $readonly = false;
     protected $fields = array();
     private $data = array();
-    public $readonly = false;
+    private $validate;
     
     public function __construct($data = array())
     {
         $this->data = $data;
+	$this->validate = new FValidate();
         $this->config();
     }
     
@@ -21,15 +23,21 @@ class Freeform implements IteratorAggregate
     {
         // Override.
     }
+
+    public function isSubmitted()
+    {
+	return count($this->data) > 0;
+    }
     
     public function listErrors()
     {
         $errors = array();
-        foreach ($this->fields as $field) {
-            try {
-                $field->validate();
-            } catch (Exception $e) {
-                $errors[] = $e->getMessage();
+        $msg = '';
+        foreach ($this->fields as $field) {	
+            foreach ($field->getRules() as $rule => $arg) {
+                if (!$this->validate->test($field->value, $rule, $arg, $msg)) {
+                    $errors[] = $msg;
+                }
             }
         }
         return $errors;
@@ -38,7 +46,7 @@ class Freeform implements IteratorAggregate
     public function hasErrors()
     {
         foreach ($this->fields as $field) {
-            if (!$field->isValid()) {
+            if (!$field->test()) {
                 return true;
             }
         }
@@ -53,13 +61,8 @@ class Freeform implements IteratorAggregate
         return $this->fields[$key];
     }
     
-    public function __set($id, FreeformInput $input)
+    public function __set($id, FControl $input)
     {
-/*
-        if (!$field instanceof FreeformField) {
-            throw new Exception('Form field "' . $id . '" must be initialized with a Field object');
-        }
-*/
         $input->form = $this;
         // Auto-set the field name, id, and value if not already set.
         if (!isset($input->name)) {
@@ -221,7 +224,7 @@ class FValidate
         //throw new Exception($str);
     }
     
-    public function test($value, $rules)
+    public function test($value, $rule, $arg, &$msg)
     {
         print_r($rules);
         $isValid = true;
@@ -251,7 +254,6 @@ class FValidate
 
     public function maxlength($value, $length)
     {
-        echo "maxlength: $value, $length<br>";
         if (strlen($value) > $length) {
             $this->error('maxlength', array($length));
             return false;
@@ -289,20 +291,20 @@ class FValidate
     public function email($value)
     {
         /*
-<ldh-str> ::= <let-dig-hyp> | <let-dig-hyp> <ldh-str>
+	<ldh-str> ::= <let-dig-hyp> | <let-dig-hyp> <ldh-str>
 
-<let-dig-hyp> ::= <let-dig> | "-"
+	<let-dig-hyp> ::= <let-dig> | "-"
 
-<let-dig> ::= <letter> | <digit>
+	<let-dig> ::= <letter> | <digit>
 
-<letter> ::= any one of the 52 alphabetic characters A through Z in
-upper case and a through z in lower case
+	<letter> ::= any one of the 52 alphabetic characters A through Z in
+	upper case and a through z in lower case
 
-<digit> ::= any one of the ten digits 0 through 9
-         */ 
-        $atext = '[0-9a-zA-Z!#$%&\'*+-\/=?^_`{|}~]';
-        $ldh = '[0-9a-zA-Z-]';
-        $pattern = '/' . $atext . '+@' . $ldh . '+([.]' . $ldh . '+)*/';
+	<digit> ::= any one of the ten digits 0 through 9
+        */ 
+        $atext = '[0-9a-zA-Z!#$%&\'*+-\/=?^_`{|}~]+';
+        $ldh = '[0-9a-zA-Z-]+';
+        $pattern = '/' . $atext . '@' . $ldh . '([.]' . $ldh . ')*/';
         if (!preg_match($pattern, $value)) {
             //$this->error('emial');
             return false;
@@ -341,6 +343,7 @@ abstract class FControl {
     protected $elem = null;
     protected $attr = array();
     protected $rules = array();
+    private $error = '';
     
     public abstract function render();
 
@@ -394,6 +397,22 @@ abstract class FControl {
             $this->rules = (is_array($rules) ? $rules : FAttributes::decode($rules)) + $this->rules;
         }
     }
+
+    public function getRules()
+    {
+        return $this->rules;
+    }
+
+    public function getError()
+    {
+        // Validate if not done so yet.
+        return $this->error;
+    }
+
+    public function setError($error)
+    {
+        $this->error = $error;
+    }
     
     public function test()
     {
@@ -411,7 +430,7 @@ abstract class FControl {
     
     public function validate()
     {
-        if (!$this->isValid()) {
+        if (!$this->test()) {
             //throw new Exception($message, $code, $previous)
         }
     }
