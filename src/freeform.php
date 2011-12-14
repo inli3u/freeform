@@ -32,13 +32,16 @@ class Freeform implements IteratorAggregate
     public function listErrors()
     {
         $errors = array();
-        $msg = '';
-        foreach ($this->fields as $field) {	
-            foreach ($field->getRules() as $rule => $arg) {
-                if (!$this->validate->test($field->value, $rule, $arg, $msg)) {
-                    $errors[] = $msg;
-                }
+        foreach ($this->fields as $field) {
+            $msg = $field->getError();
+            if (strlen($msg)) {
+                $errors[] = $msg;
             }
+            //foreach ($field->getRules() as $rule => $arg) {
+            //    if (!$this->validate->test($field->value, $rule, $arg, $msg)) {
+            //        $errors[] = $msg;
+            //    }
+            //}
         }
         return $errors;
     }
@@ -46,7 +49,7 @@ class Freeform implements IteratorAggregate
     public function hasErrors()
     {
         foreach ($this->fields as $field) {
-            if (!$field->test()) {
+            if (strlen($field->getError())) {
                 return true;
             }
         }
@@ -702,4 +705,4 @@ class FSelect extends FControl
     }
 }
 
-// vim: set ts=4 sw=4 et
+// vim: ts=4 sw=4 et
