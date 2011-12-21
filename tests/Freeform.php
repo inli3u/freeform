@@ -37,13 +37,16 @@ class FreeformTest extends PHPUnit_Framework_TestCase
         $this->assertFalse($form->hasErrors());
     }
 
-    public function testSetValidate()
+    public function testValidate()
     {
         $form = new Freeform();
         $form->name = new FText(null, 'required');
-        $this->assertTrue($this->hasErrors());
+		$form->validate();
+        $this->assertTrue($form->hasErrors());
         $form->name->value = 'Bob';
-        $this->assertFalse($this->hasErrors());
+		$form->validate();
+        $this->assertFalse($form->hasErrors());
     }
 }
 
+# vim: ts=4 sw=4 et

@@ -5,12 +5,10 @@ class Freeform implements IteratorAggregate
     public $readonly = false;
     protected $fields = array();
     private $data = array();
-    private $validate;
     
     public function __construct($data = array())
     {
         $this->data = $data;
-	$this->validate = new FValidate();
         $this->config();
     }
     
@@ -26,9 +24,20 @@ class Freeform implements IteratorAggregate
 
     public function isSubmitted()
     {
-	return count($this->data) > 0;
+        return count($this->data) > 0;
     }
     
+    public function validate($validate = null)
+    {
+        if ($validate === null) {
+            $validate = new FValidate();
+        }
+
+        foreach ($this->fields as $field) {
+            $field->validate($validate);
+        }
+    }
+
     public function listErrors()
     {
         $errors = array();
@@ -217,24 +226,33 @@ class FValidate
         'min' => 'Value must be greater than %s',
         'max' => 'Value must be less than %s',
     );
+
+    private $lastError = '';
     
+
     public function error($langKey, $args = array())
     {
         $str = array_key_exists($langKey, $this->lang) ? $this->lang[$langKey] : 'Text resource "' . $langKey . '" not found';
         if (count($args)) {
             $str = vsprintf($str, $args);
         }
+        $this->lastError = $str;
         //throw new Exception($str);
     }
-    
-    public function test($value, $rule, $arg, &$msg)
+
+    public function getLastError()
     {
-        print_r($rules);
-        $isValid = true;
+        return $this->lastError;
+    }
+    
+    public function test($value, $rules)
+    {
         foreach ($rules as $rule => $arg) {
-            $isValid = $isValid && $this->{$rule}($value, $arg);
+            if (!call_user_func(array($this, $rule), $value, $arg)) {
+                return $this->getLastError();
+            }
         }
-        return $isValid;
+        return '';
     }
 
     public function required($value)
@@ -313,6 +331,11 @@ class FValidate
             return false;
         }
         return true;
+    }
+
+    public function callback($value, $func)
+    {
+        return call_user_func($func, $value);
     }
 
     public function validate($value, $rules)
@@ -416,11 +439,23 @@ abstract class FControl {
     {
         $this->error = $error;
     }
-    
-    public function test()
+
+    public function clearError()
     {
-        $validate = new FValidate();
-        return $validate->test($this->value, $this->rules);
+        $this->error = '';
+    }
+    
+    public function validate($validate = null)
+    {
+        if ($validate === null) {
+            $validate = new FValidate();
+        }
+        $error = $validate->test($this->value, $this->rules);
+        if (strlen($error)) {
+            $this->setError($error);
+        } else {
+            $this->clearError();
+        }
     }
 
     public function errors()
@@ -431,13 +466,6 @@ abstract class FControl {
         return $v->errors();
     }
     
-    public function validate()
-    {
-        if (!$this->test()) {
-            //throw new Exception($message, $code, $previous)
-        }
-    }
-
     public function __toString()
     {
         return $this->render();
