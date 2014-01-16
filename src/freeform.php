@@ -460,7 +460,6 @@ abstract class FControl {
 
     public function errors()
     {
-        
         $v = new FValidate();
         $v->test($this->value, $this->rules);
         return $v->errors();
